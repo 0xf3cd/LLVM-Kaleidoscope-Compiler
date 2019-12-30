@@ -127,7 +127,7 @@ class CallExprAST: public ExprAST {
 public:
     CallExprAST(const std::string &Callee,
                 std::vector<std::unique_ptr<ExprAST>> Args)
-                : Callee(Callee), Args(sstd::move(Args)) {}
+                : Callee(Callee), Args(std::move(Args)) {}
 };
 
 /// PrototypeAST - This class represents the "prototype" for a function,
@@ -150,8 +150,7 @@ class FunctionAST {
     std::unique_ptr<ExprAST> Body;
 
 public:
-    FunctionAST(std::unique_ptr<PrototypeAST> Proto,
-                std::unique_ptr<ExprAST> Body)
+    FunctionAST(const std::unique_ptr<PrototypeAST>& Proto, const std::unique_ptr<ExprAST>& Body)
                 : Proto(std::move(Proto)), Body(std::move(Body)) {}
 };
 
@@ -246,7 +245,7 @@ static std::unique_ptr<ExprAST> ParseIdentifierExpr() {
 static std::unique_ptr<ExprAST> ParsePrimary() {
     switch(CurTok) {
         default: return LogError("Unknown token when expecting an expression");
-        case tok_identifier: return ParseIdentifier();
+        case tok_identifier: return ParseIdentifierExpr();
         case tok_number: return ParseNumberExpr();
         case '(': return ParseParenExpr();
     }
@@ -347,7 +346,7 @@ static std::unique_ptr<PrototypeAST> ParseExtern() {
 static std::unique_ptr<FunctionAST> ParseTopLevelExpr() {
     if(auto E = ParseExpression()) {
         // Make an anonymous proto.
-        auto Proto = std::make_unique<PrototypeAST>("", std:;vector<std::string>());
+        auto Proto = std::make_unique<PrototypeAST>("__anon_expr", std::vector<std::string>());
         // auto Proto = std::make_unique<PrototypeAST>("__anon_expr", std:;vector<std::string>());
         return std::make_unique<FunctionAST>(std::move(Proto), std::move(E));
     }
@@ -363,7 +362,7 @@ static void HandleDefinition() {
     fprintf(stderr, "Parsed a function definition.\n");
   } else {
     // Skip token for error recovery.
-    getNextToken();
+    GetNextToken();
   }
 }
 
@@ -372,7 +371,7 @@ static void HandleExtern() {
     fprintf(stderr, "Parsed an extern\n");
   } else {
     // Skip token for error recovery.
-    getNextToken();
+    GetNextToken();
   }
 }
 
@@ -382,7 +381,7 @@ static void HandleTopLevelExpression() {
     fprintf(stderr, "Parsed a top-level expr\n");
   } else {
     // Skip token for error recovery.
-    getNextToken();
+    GetNextToken();
   }
 }
 
@@ -394,7 +393,7 @@ static void MainLoop() {
     case tok_eof:
       return;
     case ';': // ignore top-level semicolons.
-      getNextToken();
+      GetNextToken();
       break;
     case tok_def:
       HandleDefinition();
@@ -414,19 +413,5 @@ static void MainLoop() {
 //===----------------------------------------------------------------------===//
 
 int main() {
-  // Install standard binary operators.
-  // 1 is lowest precedence.
-  BinopPrecedence['<'] = 10;
-  BinopPrecedence['+'] = 20;
-  BinopPrecedence['-'] = 20;
-  BinopPrecedence['*'] = 40; // highest.
-
-  // Prime the first token.
-  fprintf(stderr, "ready> ");
-  getNextToken();
-
-  // Run the main "interpreter loop" now.
-  MainLoop();
-
   return 0;
 }
